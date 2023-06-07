@@ -1,27 +1,53 @@
-from collections import namedtuple
+from dataclasses import dataclass, fields
 import math
 import numpy as np
 
 STARTING_DICE = 5
 NUM_ROLLS = 3
-FACE_PROBABILITIES = [1/6, 1/6, 4/6]
 
 
-Outcome = namedtuple("Outome", "faces probability")
+@dataclass
+class Roll:
+    gattling: int
+    dynamite: int
+    other: int
+
+    @classmethod
+    def supported_faces(cls):
+        return cls.__dataclass_fields__.keys()
+
+    @property
+    def total_rolled(self):
+        return self.gattling + self.dynamite + self.other
+
+
+@dataclass
+class Outcome:
+    probability: float
+    roll: Roll
+
+    def __init__(self, roll: Roll):
+        self.roll = roll
+        self.probability = math.prod(
+            [
+                math.pow(1 / 6, self.roll.gattling),
+                math.pow(1 / 6, self.roll.dynamite),
+                math.pow(4 / 6, self.roll.other),
+            ]
+        )
+
+    @property
+    def total_rolled(self):
+        return self.roll.total_rolled
 
 
 def generate_dice_outcomes(num_to_roll: int):
     outcomes = []
-    for a in range(0, num_to_roll + 1):
-        for b in range(0, num_to_roll + 1 - a):
-            outcome = [a, b, num_to_roll - a - b]
-            proba = math.prod(
-                [
-                    math.pow(FACE_PROBABILITIES[idx], face_count)
-                    for idx, face_count in enumerate(outcome)
-                ]
-            )
-            outcomes.append(Outcome(outcome, proba))
+    for gattling_count in range(0, num_to_roll + 1):
+        for dynamite_count in range(0, num_to_roll + 1 - gattling_count):
+            other_count = num_to_roll - gattling_count - dynamite_count
+            roll = Roll(gattling=gattling_count, dynamite=dynamite_count, other=other_count)
+            outcomes.append(Outcome(roll))
 
     return outcomes
 

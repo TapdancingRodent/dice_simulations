@@ -1,6 +1,6 @@
 import math
 
-from target import FACE_PROBABILITIES, generate_dice_outcomes
+from target import Roll, generate_dice_outcomes
 
 
 def test_no_rolls_has_simple_outcome():
@@ -10,9 +10,8 @@ def test_no_rolls_has_simple_outcome():
     """
     outcomes = generate_dice_outcomes(0)
     assert len(outcomes) == 1
-    outcome, proba = outcomes[0]
-    assert outcome == [0, 0, 0]
-    assert proba == 1
+    assert outcomes[0].total_rolled == 0
+    assert outcomes[0].probability == 1
 
 
 def test_single_roll_has_all_outcomes():
@@ -21,7 +20,7 @@ def test_single_roll_has_all_outcomes():
     THEN there will be an outcome for each face value
     """
     outcomes = generate_dice_outcomes(1)
-    assert len(outcomes) == len(FACE_PROBABILITIES)
+    assert len(outcomes) == len(Roll.supported_faces())
 
 
 def test_single_roll_probability_sum_is_one():
