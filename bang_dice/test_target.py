@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 from target import Roll, determine_end_result, generate_dice_outcomes
 
@@ -38,4 +39,7 @@ def test_policy_sticks_on_gattlings():
     WHEN a trio of gattlings have been rolled
     THEN no further rolls will be made
     """
-    pass
+    termination_roll = Roll(gattling=3, dynamite=1, other=1)
+    result = determine_end_result(termination_roll, 2)
+    assert np.allclose(result.expectation, termination_roll.as_np_array())
+    # TODO: mock generate_dice_outcomes and check it wasn't called

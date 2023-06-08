@@ -20,13 +20,17 @@ class Roll:
     def supported_faces(cls):
         return cls.__dataclass_fields__.keys()
 
+    def as_np_array(self):
+        return np.array([self.gattling, self.dynamite, self.other])
+
     @property
     def total_rolled(self):
         return self.gattling + self.dynamite + self.other
 
 
 @dataclass
-class OutcomeAggregation: pass
+class OutcomeAggregation:
+    expectation: np.array
 
 
 def calculate_probability(roll: Roll):
@@ -52,7 +56,7 @@ def generate_dice_outcomes(num_to_roll: int):
 
 def determine_end_result(roll_state: Roll, remaining_rolls: int, policy=None) -> OutcomeAggregation:
     # Apply the policy for what to keep, optionally keep rolling
-    return roll_state  # For now, simply return what was rolled
+    return OutcomeAggregation(expectation=roll_state.as_np_array())  # For now, simply return what was rolled
 
 
 if __name__ == "__main__":
