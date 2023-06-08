@@ -29,9 +29,12 @@ def test_single_roll_probability_sum_is_one():
     WHEN rolling a single die
     THEN the sum of outcomes adds up to one
     """
-    outcomes = generate_dice_outcomes(1)
-    proba_sum = sum([outcome.probability for outcome in outcomes])
-    assert math.isclose(proba_sum, 1, rel_tol=1e-9, abs_tol=0.0)
+    def sum_dice_outcome_probas(num_dice):
+        outcomes = generate_dice_outcomes(num_dice)
+        return sum([outcome.probability for outcome in outcomes])
+
+    proba_sums = np.array([sum_dice_outcome_probas(nd) for nd in range(6)])
+    assert np.allclose(proba_sums, np.ones(proba_sums.shape))
 
 
 def test_policy_sticks_on_gattlings():
@@ -42,4 +45,13 @@ def test_policy_sticks_on_gattlings():
     termination_roll = Roll(gattling=3, dynamite=1, other=1)
     result = determine_end_result(termination_roll, 2)
     assert np.allclose(result.expectation, termination_roll.as_np_array())
-    # TODO: mock generate_dice_outcomes and check it wasn't called
+
+
+def test_policy_rolls_for_gattlings():
+    """
+    WHEN less than 3 gattlings have been rolled and more rolls are available
+    THEN more rolls will happen, raising the expectation on gattlings
+    """
+    non_termination_roll = Roll(gattling=2, dynamite=1, other=2)
+    result = determine_end_result(non_termination_roll, 1)
+    assert result.expectation[0] > 2
