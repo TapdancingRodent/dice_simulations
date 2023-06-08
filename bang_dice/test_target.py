@@ -37,17 +37,43 @@ def test_single_roll_probability_sum_is_one():
     assert np.allclose(proba_sums, np.ones(proba_sums.shape))
 
 
+def test_policy_stops_when_rolls_expended():
+    """
+    WHEN you have no more available rolls
+    THEN no further rolls will be made and no other termination conditions are noted
+    """
+    termination_roll = Roll(gattling=2, dynamite=1, other=2)
+    result = determine_end_result(termination_roll, 0)
+    assert np.allclose(result.expectation, termination_roll.as_np_array())
+    assert result.gattling_exp== 0
+    assert result.dynamite_exp== 0
+
+
 def test_policy_sticks_on_gattlings():
     """
     WHEN a trio of gattlings have been rolled
-    THEN no further rolls will be made
+    THEN no further rolls will be made and a success will be registered
     """
-    termination_roll = Roll(gattling=3, dynamite=1, other=1)
+    termination_roll = Roll(gattling=3, dynamite=0, other=2)
     result = determine_end_result(termination_roll, 2)
     assert np.allclose(result.expectation, termination_roll.as_np_array())
+    assert result.gattling_exp== 1
+    assert result.dynamite_exp== 0
 
 
-def test_policy_rolls_for_gattlings():
+def test_policy_explodes_on_dynamites():
+    """
+    WHEN a trio of dynamites have been rolled
+    THEN no further rolls will be made and an explosion will be registered
+    """
+    termination_roll = Roll(gattling=1, dynamite=3, other=1)
+    result = determine_end_result(termination_roll, 2)
+    assert np.allclose(result.expectation, termination_roll.as_np_array())
+    assert result.gattling_exp== 0
+    assert result.dynamite_exp== 1
+
+
+def test_policy_keeps_rolling_for_gattlings():
     """
     WHEN less than 3 gattlings have been rolled and more rolls are available
     THEN more rolls will happen, raising the expectation on gattlings
@@ -55,3 +81,24 @@ def test_policy_rolls_for_gattlings():
     non_termination_roll = Roll(gattling=2, dynamite=1, other=2)
     result = determine_end_result(non_termination_roll, 1)
     assert result.expectation[0] > 2
+
+
+def test_unreachable_trio_termination_outcomes():
+    """
+    WHEN you run the program with a fewer than three dice
+    THEN three of a kind termination outcomes will have expectation zero
+    """
+    garbage_roll = determine_end_result(Roll(gattling=0, dynamite=0, other=2), 3)
+    assert garbage_roll.gattling_exp == 0
+    assert garbage_roll.dynamite_exp == 0
+    assert np.all(garbage_roll.expectation > 0)
+
+def test_trio_outcomes_are_aggregated():
+    """
+    WHEN you run the program with at least 3 dice
+    THEN there will be a non-zero chance of a three of a kind termination
+    """
+    viable_roll = determine_end_result(Roll(gattling=0, dynamite=0, other=3), 3)
+    assert viable_roll.gattling_exp > 0
+    assert viable_roll.dynamite_exp > 0
+    assert np.all(viable_roll.expectation > 0)

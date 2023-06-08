@@ -64,26 +64,46 @@ def generate_dice_outcomes(num_to_roll: int):
 @dataclass
 class OutcomeAggregation:
     expectation: np.array
+    gattling_exp: float
+    dynamite_exp: float
 
-    def __init__(self, expectation=None):
+    def __init__(self, expectation=None, gattling_exp=0.0, dynamite_exp=0.0):
         if expectation is None:
             self.expectation = np.zeros((len(Roll.supported_faces()),))
         else:
             self.expectation = expectation
 
+        self.gattling_exp = gattling_exp
+        self.dynamite_exp = dynamite_exp
+
     def __iadd__(self, other_oa):
         self.expectation += other_oa.expectation
+        self.gattling_exp += other_oa.gattling_exp
+        self.dynamite_exp += other_oa.dynamite_exp
         return self
 
     def __mul__(self, other):
         if not isinstance(other, numbers.Number):
             raise NotImplementedError(f"Outcome aggregators can only be multiplied by a numeric scalar value not {other} of type {type(other)}")
+
         self.expectation = self.expectation * other
+        self.gattling_exp *= other
+        self.dynamite_exp *= other
         return self
 
 
 def determine_end_result(roll_state: Roll, remaining_rolls: int, policy=None) -> OutcomeAggregation:
-    if roll_state.gattling >= 3 or roll_state.dynamite >= 3 or roll_state.other == 0 or remaining_rolls == 0:
+    if roll_state.gattling >= 3:
+        return OutcomeAggregation(expectation=roll_state.as_np_array(), gattling_exp=1.0)
+
+    elif roll_state.dynamite >= 3:
+        return OutcomeAggregation(expectation=roll_state.as_np_array(), dynamite_exp=1.0)
+
+    elif remaining_rolls == 0:
+        return OutcomeAggregation(expectation=roll_state.as_np_array())
+
+    elif roll_state.other == 0:
+        # Default case to avoid wasted recursion in some edge cases
         return OutcomeAggregation(expectation=roll_state.as_np_array())
 
     roll_outcomes = generate_dice_outcomes(roll_state.other)
@@ -102,5 +122,4 @@ def determine_end_result(roll_state: Roll, remaining_rolls: int, policy=None) ->
 if __name__ == "__main__":
     policy = "Shoot for as many gattling as possible"
     # Pretend I have an extra roll because I'm lazy
-    outcome_agg = determine_end_result(Roll(gattling=0, dynamite=0, other=5), 3, policy)
-    print(outcome_agg)
+    print(determine_end_result(Roll(gattling=0, dynamite=0, other=5), 3, policy))
