@@ -1,11 +1,9 @@
 from collections import namedtuple
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
+import logging
 import math
 import numbers
 import numpy as np
-
-STARTING_DICE = 5
-NUM_ROLLS = 3
 
 
 RollProbability = namedtuple("RollProbability", "roll probability")
@@ -91,22 +89,36 @@ class OutcomeAggregation:
         self.dynamite_exp *= other
         return self
 
+    def pretty_outcome(self):
+        return (
+            f"Expected outcome: {dict(zip(Roll.supported_faces(), self.expectation))}\n"
+            f"P(achieving 3 gattling): {self.gattling_exp}\n"
+            f"P(exploding to 3 dynamite): {self.dynamite_exp}"
+        )
+
 
 def determine_end_result(roll_state: Roll, remaining_rolls: int, policy=None) -> OutcomeAggregation:
     if roll_state.gattling >= 3:
+        logging.debug("Reached terminating state: 3 gattlings")
         return OutcomeAggregation(expectation=roll_state.as_np_array(), gattling_exp=1.0)
 
     elif roll_state.dynamite >= 3:
+        logging.debug("Reached terminating state: 3 dynamite")
         return OutcomeAggregation(expectation=roll_state.as_np_array(), dynamite_exp=1.0)
 
     elif remaining_rolls == 0:
+        logging.debug("Reached terminating state: Exhausted re-rolls")
         return OutcomeAggregation(expectation=roll_state.as_np_array())
 
     elif roll_state.other == 0:
+        logging.debug("Reached terminating state: No dice to re-roll")
         # Default case to avoid wasted recursion in some edge cases
         return OutcomeAggregation(expectation=roll_state.as_np_array())
 
+    logging.debug("Roll state not terminal, recursing into next re-roll")
+    logging.debug(f"Current dice faces: {roll_state}")
     roll_outcomes = generate_dice_outcomes(roll_state.other)
+    logging.debug(f"Additional dice outcomes to be evaluated: {roll_outcomes}")
     outcome_agg = OutcomeAggregation()
 
     for outcome in roll_outcomes:
@@ -116,10 +128,6 @@ def determine_end_result(roll_state: Roll, remaining_rolls: int, policy=None) ->
             determine_end_result(outcome.roll, remaining_rolls - 1, policy) * outcome.probability
         )
 
+    logging.debug(f"Intermediate outcome at reroll height {remaining_rolls}: {outcome_agg}")
+
     return outcome_agg
-
-
-if __name__ == "__main__":
-    policy = "Shoot for as many gattling as possible"
-    # Pretend I have an extra roll because I'm lazy
-    print(determine_end_result(Roll(gattling=0, dynamite=0, other=5), 3, policy))
